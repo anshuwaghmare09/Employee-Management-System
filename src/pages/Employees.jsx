@@ -1,11 +1,13 @@
-import { useContext } from "react";
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { useSearchParams } from "react-router-dom";
+import { useContext, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { EmployeeContext } from "../context/EmployeesContext";
+import {
+  createEmployee,
+  deleteEmployee,
+} from "../services/employeeApi.mjs";
 
 function Employees() {
-  const { employees, setEmployees } = useContext(EmployeeContext);
+  const { employees, setEmployees,loading } = useContext(EmployeeContext);
 
   const [showForm, setshowForm] = useState(false);
   const [name, setName] = useState("");
@@ -15,8 +17,11 @@ function Employees() {
   const [employeedepartment, setEmployeeDepartment] = useState("");
   const department = searchParams.get("department");
   const [search, setSearch] = useState("");
+  const [phone, setPhone] = useState("");
+  const [salary, setSalary] = useState("");
+  const [status, setStatus] = useState("");
 
-  const filteredEmployees = employees.filter((employee) => {
+  const filteredEmployees = (employees || []).filter((employee) => {
     const matchDepartment = department
       ? employee.department === department
       : true;
@@ -27,31 +32,51 @@ function Employees() {
 
     return matchDepartment && matchSearch;
   });
+  if(loading){
+    return <h2>Loading Employees....</h2>
+  }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
 
     const newEmployee = {
-      id: employees.length + 1,
       name: name,
       email: email,
+      phone: phone,
       department: employeedepartment,
       position: position,
+      salary: Number(salary),
+      status: "Active",
     };
+    try {
+      const data = await createEmployee(newEmployee);
+      setEmployees([...employees, data.employee]);
 
-    setEmployees([...employees, newEmployee]);
+      setName("");
+      setEmail("");
+      setEmployeeDepartment("");
+      setPosition("");
+      setPhone("");
+      setSalary("");
+      setStatus("");
 
-    setName("");
-    setEmail("");
-    setEmployeeDepartment("");
-    setPosition("");
-
-    setshowForm(false);
+      setshowForm(false);
+      console.log("Employee Created :", data.employee);
+    } catch (error) {
+      console.log("Error creating employee :", error);
+    }
   }
-  function handleDelete(id) {
-    const updatedEmployees = employees.filter((employee) => employee.id !== id);
-    setEmployees(updatedEmployees);
-  }
+
+  const handleDelete = async (id) => {
+    try {
+      const data = await deleteEmployee(id);
+      console.log("Delete Response :", data);
+
+      setEmployees(employees.filter((employee) => employee._id !== id));
+    } catch (error) {
+      console.log("Error deleteing employee :", error);
+    }
+  };
 
   return (
     <div className="employee-page">
@@ -82,6 +107,8 @@ function Employees() {
       <div className="filter-section">
         <div className="department-filter">
           <label htmlFor="filter-department">Department</label>
+          <br />
+          <br />
           <select
             id="filter-department"
             value={department || ""}
@@ -96,12 +123,14 @@ function Employees() {
           >
             <option value="">All Department</option>
             <option value="IT">IT</option>
-            <option value="HR">HR</option>
+            <option value="EE">EE</option>
+            <option value="AIML">AIML</option>
             <option value="Finance">Finance</option>
           </select>
         </div>
       </div>
-      <br /><br />
+      <br />
+      <br />
       {showForm && (
         <form className="employee-form" onSubmit={handleSubmit}>
           <label htmlFor="name">Name :</label>
@@ -149,6 +178,40 @@ function Employees() {
           />
           <br />
           <br />
+          <label htmlFor="phone">Phone :</label>
+          <br />
+          <input
+            id="phone"
+            type="tel"
+            placeholder="Enter the phone Number :"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            required
+          />
+          <br />
+          <br />
+          <label htmlFor="salary">Salary :</label>
+          <br />
+          <input
+            type="number"
+            id="salary"
+            placeholder="Enter the salary"
+            value={salary}
+            onChange={(e) => setSalary(e.target.value)}
+          />
+          <br />
+          <br />
+          <label htmlFor="status">Status :</label>
+          <br />
+           <input
+            type="text"
+            id="status"
+            placeholder="Enter the status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          />
+          <br />
+          <br />
           <button className="save-btn" type="submit">
             Save Employee
           </button>
@@ -169,20 +232,20 @@ function Employees() {
         <tbody>
           {filteredEmployees.map((employee) => {
             return (
-              <tr key={employee.id}>
+              <tr key={employee._id}>
                 <td>
-                  <Link to={`/employees/${employee.id}`}>
+                  <Link to={`/employees/${employee._id}`}>
                     <button className="view-btn">View Details</button>
                   </Link>
 
                   <button
                     className="delete-btn"
-                    onClick={() => handleDelete(employee.id)}
+                    onClick={() => handleDelete(employee._id)}
                   >
                     Delete
                   </button>
                 </td>
-                <td>{employee.id}</td>
+                <td>{employee._id}</td>
                 <td>{employee.name}</td>
                 <td>{employee.email}</td>
                 <td>{employee.department}</td>
