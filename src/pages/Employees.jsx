@@ -1,13 +1,10 @@
 import { useContext, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { EmployeeContext } from "../context/EmployeesContext";
-import {
-  createEmployee,
-  deleteEmployee,
-} from "../services/employeeApi.mjs";
+import { createEmployee, deleteEmployee } from "../services/employeeApi.mjs";
 
 function Employees() {
-  const { employees, setEmployees,loading } = useContext(EmployeeContext);
+  const { employees, setEmployees, loading } = useContext(EmployeeContext);
 
   const [showForm, setshowForm] = useState(false);
   const [name, setName] = useState("");
@@ -20,6 +17,8 @@ function Employees() {
   const [phone, setPhone] = useState("");
   const [salary, setSalary] = useState("");
   const [status, setStatus] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   const filteredEmployees = (employees || []).filter((employee) => {
     const matchDepartment = department
@@ -32,25 +31,72 @@ function Employees() {
 
     return matchDepartment && matchSearch;
   });
-  if(loading){
-    return <h2>Loading Employees....</h2>
+  if (loading) {
+    return <h2>Loading Employees....</h2>;
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
 
+    if (!name.trim()) {
+      setError("Name is Required");
+      setMessage("");
+      return;
+    }
+    if (!email.trim()) {
+      setError("Email is Required");
+      setMessage("");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Please enter a valid email");
+      setMessage("");
+      return;
+    }
+    if (!phone.trim()) {
+      setError("Phone is Required");
+      setMessage("");
+      return;
+    }
+
+    if (!/^\d{10}$/.test(phone)) {
+      setError("Phone number must be exactly 10 digit");
+      setMessage("");
+      return;
+    }
+
+    if (!employeedepartment) {
+      setError("Department is required");
+      setMessage("");
+      return;
+    }
+
+    if (!position.trim()) {
+      setError("Position is required");
+      setMessage("");
+      return;
+    }
+
+    if (!salary || Number(salary) <= 0) {
+      setError("Salary must be greater than 0");
+      setMessage("");
+      return;
+    }
+
     const newEmployee = {
-      name: name,
-      email: email,
+      name: name.trim(),
+      email: email.trim(),
       phone: phone,
       department: employeedepartment,
       position: position,
       salary: Number(salary),
-      status: "Active",
+      status: status || "Active",
     };
     try {
       const data = await createEmployee(newEmployee);
-      setEmployees([...employees, data.employee]);
+      setEmployees((prevEmployees) => [...prevEmployees, data.employee]);
+      setMessage("Employee created Successfully");
+      setError("");
 
       setName("");
       setEmail("");
@@ -60,26 +106,44 @@ function Employees() {
       setSalary("");
       setStatus("");
 
-      setshowForm(false);
+      // setshowForm(false);
       console.log("Employee Created :", data.employee);
     } catch (error) {
+      setError(error.message);
+      setMessage("");
       console.log("Error creating employee :", error);
     }
   }
 
   const handleDelete = async (id) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this employee ?",
+    );
+    if (!confirmDelete) {
+      return;
+    }
     try {
       const data = await deleteEmployee(id);
       console.log("Delete Response :", data);
 
-      setEmployees(employees.filter((employee) => employee._id !== id));
+      setEmployees((prevEmployees) =>
+        prevEmployees.filter((employee) => employee._id !== id),
+      );
+      setMessage(data.message);
+      setError("");
     } catch (error) {
+      setError(error.message);
+      setMessage("");
+
       console.log("Error deleteing employee :", error);
     }
   };
 
   return (
     <div className="employee-page">
+      {message && <p className="success-message">{message}</p>}
+
+      {error && <p className="error-message">{error}</p>}
       <div className="search-box">
         <label htmlFor="search">Search Employee : </label>
         <input
@@ -145,6 +209,18 @@ function Employees() {
           />
           <br />
           <br />
+          <label htmlFor="phone">Phone :</label>
+          <br />
+          <input
+            id="text"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="Enter the phone Number :"
+            required
+          />
+          <br />
+          <br />
           <label htmlFor="email">Email :</label>
           <br />
           <input
@@ -176,18 +252,7 @@ function Employees() {
             value={position}
             onChange={(e) => setPosition(e.target.value)}
           />
-          <br />
-          <br />
-          <label htmlFor="phone">Phone :</label>
-          <br />
-          <input
-            id="phone"
-            type="tel"
-            placeholder="Enter the phone Number :"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            required
-          />
+
           <br />
           <br />
           <label htmlFor="salary">Salary :</label>
@@ -203,7 +268,7 @@ function Employees() {
           <br />
           <label htmlFor="status">Status :</label>
           <br />
-           <input
+          <input
             type="text"
             id="status"
             placeholder="Enter the status"

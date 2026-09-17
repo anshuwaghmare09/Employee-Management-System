@@ -21,20 +21,19 @@ const createEmployee = async (employeeData) => {
 };
 
 const updateEmployee = async (id, employeeData) => {
-  const response = await axios.put(
-    `${API_URL}/${id}`,
-    employeeData
-  );
+  const response = await axios.put(`${API_URL}/${id}`, employeeData);
 
   return response.data;
 };
 
 const deleteEmployee = async (id) => {
-  const response = await axios.delete(
-    `${API_URL}/${id}`
-  );
+  const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+  const data = await response.json();
+  if (!response) {
+    throw new Error(data.message || "Failed to delete employee");
+  }
 
-  return response.data;
+  return data;
 };
 
 export {

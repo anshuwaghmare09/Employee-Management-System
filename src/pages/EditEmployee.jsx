@@ -18,19 +18,21 @@ function EditEmployee() {
   const [phone, setPhone] = useState("");
   const [salary, setSalary] = useState("");
   const [status, setStatus] = useState("Active");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
         const data = await getEmployeeId(id);
-        setEmployee(data.employee);
-        setName(data.employee.name);
-        setEmail(data.employee.email);
-        setDepartment(data.employee.department);
-        setPosition(data.employee.position);
-        setPhone(data.employee.phone);
-        setSalary(data.employee.salary);
-        setStatus(data.employee.status);
+        const employeeData = data.employee;
+        setEmployee(employeeData);
+        setName(employeeData.name || "");
+        setEmail(employeeData.email || "");
+        setDepartment(employeeData.department || "");
+        setPosition(employeeData.position || "");
+        setPhone(employeeData.phone || "");
+        setSalary(employeeData.salary || "");
+        setStatus(employeeData.status || "Active");
       } catch (error) {
         console.log("Error Fetching employee :", error);
       } finally {
@@ -48,25 +50,68 @@ function EditEmployee() {
 
   const handleUpdate = async (e) => {
     e.preventDefault();
+
+    if (!name.trim()) {
+      setError("Name is required");
+      return;
+    }
+
+    if (!email.trim()) {
+      setError("Email is required");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Please enter a valid email");
+      return;
+    }
+
+    if (!phone.trim()) {
+      setError("Phone number is required");
+      return;
+    }
+
+    if (!/^\d{10}$/.test(phone)) {
+      setError("Phone number must be exactly 10 digits");
+      return;
+    }
+
+    if (!department) {
+      setError("Department is required");
+      return;
+    }
+
+    if (!position.trim()) {
+      setError("Position is required");
+      return;
+    }
+
+    if (!salary || Number(salary) <= 0) {
+      setError("Salary must be greater than 0");
+      return;
+    }
+
     try {
       const updateData = {
-        name: name,
-        email: email,
-        department: department,
-        position: position,
-        phone: phone,
+        name: name.trim(),
+        email: email.trim(),
+        department: department.trim(),
+        position: position.trim(),
+        phone: phone.trim(),
         salary: Number(salary),
-        status,
+        status: status || "Active",
       };
       const data = await updateEmployee(id, updateData);
       console.log("Update Employee :", data);
-      setEmployees((prevEmployees) => {
+      setEmployees((prevEmployees) =>
         prevEmployees.map((employee) =>
           employee._id === id ? data.employee : employee,
-        );
-      });
+        ),
+      );
       navigate(`/employees/${id}`);
+      setError("");
     } catch (error) {
+      setError(error.message);
       console.log("Error updating Employees :", error);
     }
   };
@@ -75,6 +120,8 @@ function EditEmployee() {
       <h1>Edit Employees</h1>
 
       <form className="edit-employee-form" onSubmit={handleUpdate}>
+        {error && <p className="error-message">{error}</p>}
+
         <div className="edit-form-group">
           <label htmlFor="name">Name :</label>
           <br />
@@ -143,9 +190,10 @@ function EditEmployee() {
         <br />
         <br />
         <div className="edit-form-group">
-          <label htmlFor="stauts">Status :</label>
+          <label htmlFor="status">Status :</label>
           <br />
           <input
+            id="status"
             type="text"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
